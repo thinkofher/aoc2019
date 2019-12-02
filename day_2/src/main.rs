@@ -1,3 +1,4 @@
+use std::env;
 use std::io;
 use std::io::prelude::*;
 
@@ -32,9 +33,60 @@ fn prepare_calculations(intcode: &mut Vec<i32>, noun: i32, verb: i32) {
     *val = verb;
 }
 
+fn solve_intcode(mut intcode: Vec<i32>) -> i32 {
+    for (min, max) in (0..intcode.len() / 4).zip(1..intcode.len() / 4 + 1) {
+        let parameters_positions: Vec<usize> = (min * 4..max * 4).collect();
+
+        let operation: Operation;
+        let first_value: i32;
+        let second_value: i32;
+        let ans_position: usize;
+        {
+            let operation_code = *intcode.get(parameters_positions[0]).unwrap();
+            operation = match Operation::from_i32(operation_code) {
+                Some(op) => op,
+                None => {
+                    break;
+                }
+            }
+        }
+        {
+            first_value = *intcode
+                .get(*intcode.get(parameters_positions[1]).unwrap() as usize)
+                .unwrap();
+        }
+        {
+            second_value = *intcode
+                .get(*intcode.get(parameters_positions[2]).unwrap() as usize)
+                .unwrap();
+        }
+        {
+            ans_position = *intcode.get(parameters_positions[3]).unwrap() as usize;
+        }
+        let ans = intcode.get_mut(ans_position).unwrap();
+        *ans = operation.execute(first_value, second_value);
+    }
+    return *intcode.get(0).unwrap();
+}
+
 fn main() {
     let input = io::stdin();
     let mut intcode = Vec::new();
+
+    let numerical_args: Vec<i32> = env::args().skip(1)
+        .map(|val| {
+            val.parse()
+                .unwrap_or_else(|_| {
+                    eprintln!("Only numericla values as arguments!");
+                    std::process::exit(1);
+                })
+        })
+        .collect();
+
+    let search_value: i32 = *numerical_args.get(0).unwrap_or_else(|| {
+        eprintln!("You have to provide value for search!");
+        std::process::exit(1);
+    });
 
     for line in input.lock().lines() {
         let mut code: Vec<i32> = line
@@ -47,39 +99,7 @@ fn main() {
 
     prepare_calculations(&mut intcode, 12, 2);
 
-    for (min, max) in (0..intcode.len() / 4).zip(1..intcode.len() / 4 + 1) {
-        let intcode_slice: Vec<usize> = (min * 4..max * 4).collect();
+    let ans = solve_intcode(intcode);
 
-        let operation: Operation;
-        let first_value: i32;
-        let second_value: i32;
-        let ans_position: usize;
-        {
-            let operation_code = *intcode.get(intcode_slice[0]).unwrap();
-            operation = match Operation::from_i32(operation_code) {
-                Some(op) => op,
-                None => {
-                    println!("Code: {}. Program stops.", operation_code);
-                    break;
-                }
-            }
-        }
-        {
-            first_value = *intcode
-                .get(*intcode.get(intcode_slice[1]).unwrap() as usize)
-                .unwrap();
-        }
-        {
-            second_value = *intcode
-                .get(*intcode.get(intcode_slice[2]).unwrap() as usize)
-                .unwrap();
-        }
-        {
-            ans_position = *intcode.get(intcode_slice[3]).unwrap() as usize;
-        }
-        let ans = intcode.get_mut(ans_position).unwrap();
-        *ans = operation.execute(first_value, second_value);
-    }
-    let result: Vec<String> = intcode.iter().map(|val| format!("{}", val)).collect();
-    println!("{}", result.join(","));
+    println!("{}", ans);
 }
