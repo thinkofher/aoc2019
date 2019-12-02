@@ -2,7 +2,12 @@ use std::io;
 use std::io::prelude::*;
 
 fn calculate_fuel(mass: i32) -> i32 {
-    (mass / 3) - 2
+    let fuel = (mass / 3) - 2;
+    if fuel < 0 {
+        0
+    } else {
+        fuel + calculate_fuel(fuel)
+    }
 }
 
 fn main() {
