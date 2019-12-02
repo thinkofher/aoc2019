@@ -23,13 +23,13 @@ impl Operation {
     }
 }
 
-fn prepare_calculations(intcode: &mut Vec<i32>) {
+fn prepare_calculations(intcode: &mut Vec<i32>, noun: i32, verb: i32) {
     {
         let val = intcode.get_mut(1).unwrap();
-        *val = 12;
+        *val = noun;
     }
     let val = intcode.get_mut(2).unwrap();
-    *val = 2;
+    *val = verb;
 }
 
 fn main() {
@@ -45,7 +45,7 @@ fn main() {
         intcode.append(&mut code);
     }
 
-    prepare_calculations(&mut intcode);
+    prepare_calculations(&mut intcode, 12, 2);
 
     for (min, max) in (0..intcode.len() / 4).zip(1..intcode.len() / 4 + 1) {
         let intcode_slice: Vec<usize> = (min * 4..max * 4).collect();
