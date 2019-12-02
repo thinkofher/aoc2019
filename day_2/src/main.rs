@@ -73,13 +73,13 @@ fn main() {
     let input = io::stdin();
     let mut intcode = Vec::new();
 
-    let numerical_args: Vec<i32> = env::args().skip(1)
+    let numerical_args: Vec<i32> = env::args()
+        .skip(1)
         .map(|val| {
-            val.parse()
-                .unwrap_or_else(|_| {
-                    eprintln!("Only numericla values as arguments!");
-                    std::process::exit(1);
-                })
+            val.parse().unwrap_or_else(|_| {
+                eprintln!("Only numerical values as arguments!");
+                std::process::exit(1);
+            })
         })
         .collect();
 
@@ -99,7 +99,20 @@ fn main() {
 
     prepare_calculations(&mut intcode, 12, 2);
 
-    let ans = solve_intcode(intcode);
+    let mut ans: Option<i32> = None;
+    for noun in 0..100 {
+        for verb in 0..100 {
+            let mut intcode_to_solve = intcode.clone();
+            prepare_calculations(&mut intcode_to_solve, noun, verb);
+            let solved_value = solve_intcode(intcode_to_solve);
+            if solved_value == search_value {
+                ans = Some(100 * noun + verb);
+            }
+        }
+    }
 
-    println!("{}", ans);
+    match ans {
+        Some(value) => println!("{}", value),
+        None => println!("Could not find the answer.")
+    }
 }
