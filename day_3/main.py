@@ -42,7 +42,7 @@ class Point(NamedTuple):
     y: int
 
 
-Wire = Set[Point]
+Wire = List[Point]
 Wires = List[Wire]
 Instructions = List[Instruction]
 
@@ -53,25 +53,25 @@ def manhattan_distance(origin: Point, target: Point):
 
 def execute_instructions(instructions: Instructions) -> Wire:
     last_point = Point(0, 0)
-    wire: Wire = set()
+    wire: Wire = []
 
     for instruction in instructions:
         for position in range(1, instruction.length+1):
             if instruction.direction == LEFT:
                 new_point = Point(last_point.x - position, last_point.y)
-                wire.add(new_point)
+                wire.append(new_point)
 
             if instruction.direction == RIGHT:
                 new_point = Point(last_point.x + position, last_point.y)
-                wire.add(new_point)
+                wire.append(new_point)
 
             if instruction.direction == UP:
                 new_point = Point(last_point.x, last_point.y + position)
-                wire.add(new_point)
+                wire.append(new_point)
 
             if instruction.direction == DOWN:
                 new_point = Point(last_point.x, last_point.y - position)
-                wire.add(new_point)
+                wire.append(new_point)
         last_point = new_point
     return wire
 
@@ -88,10 +88,16 @@ if __name__ == "__main__":
             wires.append(execute_instructions(instructions))
             instructions: Instructions = []
 
-    intersection: Set[Point] = wires[0]
+    intersection: Set[Point] = set(wires[0])
     for points in wires[1:]:
-        intersection = intersection.intersection(points)
+        intersection = intersection.intersection(set(points))
 
-    origin = Point(0, 0)
-    ans = min([manhattan_distance(origin, point) for point in intersection])
-    print(ans)
+    results = []
+    result = 0
+    for point in intersection:
+        for wire in wires:
+            result += wire.index(point) + 1
+        results.append(result)
+        result = 0
+
+    print(min(results))
