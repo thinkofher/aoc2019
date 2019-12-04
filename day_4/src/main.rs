@@ -35,6 +35,34 @@ fn never_decrase(numbers: &i32) -> bool {
         .all(|(first, second)| first <= second)
 }
 
+fn split_into_groups(numbers: Vec<u8>) -> Vec<Vec<u8>> {
+    let mut old = numbers.get(0).unwrap();
+    let mut group = Vec::new();
+    let mut groups_vec = Vec::new();
+
+    group.push(*old);
+
+    for new in numbers.iter().skip(1) {
+        if new != old {
+            groups_vec.push(group);
+            group = Vec::new();
+        }
+        old = new;
+        group.push(*old);
+    }
+    groups_vec.push(group);
+
+    groups_vec
+}
+
+fn only_even_groups(numbers: &i32) -> bool {
+    let numbers_vec = split_to_digits(numbers);
+
+    split_into_groups(numbers_vec)
+        .iter()
+        .any(|group| group.len() == 2)
+}
+
 fn main() {
     let numerical_args: Vec<i32> = collect_args();
 
@@ -57,6 +85,7 @@ fn main() {
         .filter(|val| split_to_digits(val).len() == 6)
         .filter(never_decrase)
         .filter(two_adjacent)
+        .filter(only_even_groups)
         .collect();
 
     println!("{}", codes.len());
