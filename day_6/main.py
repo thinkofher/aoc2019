@@ -4,7 +4,6 @@ import argparse
 import networkx as nx
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="Solution for the 6th day of Advent of Code.",
     )
@@ -27,3 +26,9 @@ if __name__ == "__main__":
         list(nx.bfs_tree(graph, node))[1:] for node in graph.nodes()
     ]
     print(sum(map(len, bfs_calculated_nodes)))
+    path = list(
+        nx.algorithms.simple_paths.shortest_simple_paths(
+            graph.to_undirected(), "YOU", "SAN"
+        )
+    )[0]
+    print(len(list(zip(path[1:-1], path[2:-1]))))
