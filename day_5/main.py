@@ -14,6 +14,10 @@ class Operation(enum.Enum):
     Multiply = 2
     Input = 3
     Output = 4
+    JumpIfTrue = 5
+    JumpIfFalse = 6
+    LessThan = 7
+    Equals = 8
     Halt = 99
 
 
@@ -25,7 +29,7 @@ class Parameters(enum.Enum):
 
 class Modes(NamedTuple):
     opcode: Operation
-    parameters: Tuple[Parameters, Parameters, Parameters]
+    parameters: Tuple[Parameters, ...]
 
     @classmethod
     def from_intcode(cls, intcode_slice: Intcode):
@@ -36,15 +40,17 @@ class Modes(NamedTuple):
 
         additional_values: int = 0
 
-        if opcode in [1, 2]:
+        if opcode in [1, 2, 7, 8]:
             additional_values = 3
+        elif opcode in [5, 6]:
+            additional_values = 2
         elif opcode in [3, 4]:
             additional_values = 1
         elif opcode == 99:
             pass
         else:
             raise ValueError(
-                f"Opcode ({opcode}) can only be 1, 2, 3, 4 or 99."
+                f"Opcode ({opcode}) can only be 1, 2, 3, 4, 5, 6, 7, 8 or 99."
             )
 
         values_parameters: List[int] = list(map(int, opcode_str[:-2]))
@@ -64,13 +70,15 @@ class WrappedValue(NamedTuple):
     def get_value(self, intcode: Intcode) -> int:
         if self.mode == Parameters.Position:
             return int(intcode[self.value])
-        if self.mode == Parameters.Immediate:
+        else:
             return self.value
 
 
 class SingleCode:
 
+    instruction_pointer: int
     _OPERATION_STEP = 4
+    _JUMP_STEP = 3
     _INPUT_OUTPUT_STEP = 2
     _HALT_STEP = 0
 
@@ -90,7 +98,7 @@ class SingleCode:
     def from_intcode(cls, intcode_slice: Intcode):
         modes = Modes.from_intcode(intcode_slice)
 
-        values: Tuple[int, ] = tuple(map(int, intcode_slice[1:]))
+        values: Tuple[int, ...] = tuple(map(int, intcode_slice[1:]))
 
         if modes.opcode == Operation.Halt:
             return cls(
@@ -99,8 +107,13 @@ class SingleCode:
                 WrappedValue(Parameters.Position, 0),
                 0,
             )
-        if modes.opcode in [Operation.Add, Operation.Multiply]:
-            wrapped_values: Tuple[WrappedValue, ] = tuple(
+        if modes.opcode in [
+            Operation.Add,
+            Operation.Multiply,
+            Operation.LessThan,
+            Operation.Equals,
+        ]:
+            wrapped_values: Tuple[WrappedValue, ...] = tuple(
                 WrappedValue(parameter, value)
                 for parameter, value in zip(modes.parameters, values)
             )
@@ -110,6 +123,13 @@ class SingleCode:
                 wrapped_values[1],
                 wrapped_values[2].value,
             )
+        if modes.opcode in [Operation.JumpIfTrue, Operation.JumpIfFalse]:
+            wrapped_values = tuple(
+                WrappedValue(parameter, value)
+                for parameter, value in zip(modes.parameters, values)
+            )
+            return cls(modes.opcode, wrapped_values[0], wrapped_values[1], 0)
+
         if modes.opcode in [Operation.Input, Operation.Output]:
             return cls(
                 modes.opcode,
@@ -126,41 +146,74 @@ class SingleCode:
             return self._add(intcode)
         if self.operation == Operation.Multiply:
             return self._multiply(intcode)
+        if self.operation == Operation.JumpIfTrue:
+            return self._jumpt_if_true(intcode)
+        if self.operation == Operation.JumpIfFalse:
+            return self._jump_if_false(intcode)
+        if self.operation == Operation.LessThan:
+            return self._less_than(intcode)
+        if self.operation == Operation.Equals:
+            return self._equals(intcode)
         if self.operation == Operation.Input:
             return self._input(intcode)
         if self.operation == Operation.Output:
             return self._output(intcode)
+        if self.operation == Operation.Halt:
+            return self._HALT_STEP
 
-        return self._HALT_STEP
+        raise ValueError(f"There is no operation like {self.operation}")
 
     def _add(self, intcode: Intcode) -> int:
         intcode[self.target_adress] = str(
             self.first_value.get_value(intcode)
             + self.second_value.get_value(intcode)
         )
-        return self._OPERATION_STEP
+        return self._OPERATION_STEP + self.instruction_pointer
 
     def _multiply(self, intcode: Intcode) -> int:
         intcode[self.target_adress] = str(
             self.first_value.get_value(intcode)
             * self.second_value.get_value(intcode)
         )
-        return self._OPERATION_STEP
+        return self._OPERATION_STEP + self.instruction_pointer
 
     def _input(self, intcode: Intcode) -> int:
-        input_value = int(input('Provide input: '))
+        input_value = int(input("Provide input: "))
         intcode[self.target_adress] = str(input_value)
-        return self._INPUT_OUTPUT_STEP
+        return self._INPUT_OUTPUT_STEP + self.instruction_pointer
 
     def _output(self, intcode: Intcode) -> int:
         value_to_output = intcode[self.target_adress]
-        print(f'Output value: {value_to_output}')
-        return self._INPUT_OUTPUT_STEP
+        print(f"Output value: {value_to_output}")
+        return self._INPUT_OUTPUT_STEP + self.instruction_pointer
 
+    def _jumpt_if_true(self, intcode: Intcode) -> int:
+        if self.first_value.get_value(intcode) != 0:
+            return self.second_value.get_value(intcode)
+        return self._JUMP_STEP + self.instruction_pointer
 
-def init_intcode(intcode: Intcode, state="1202") -> None:
-    intcode[1] = str(int(state[0:2]))
-    intcode[2] = str(int(state[2:4]))
+    def _jump_if_false(self, intcode: Intcode) -> int:
+        if self.first_value.get_value(intcode) == 0:
+            return self.second_value.get_value(intcode)
+        return self._JUMP_STEP + self.instruction_pointer
+
+    def _less_than(self, intcode: Intcode) -> int:
+        if self.first_value.get_value(intcode) < self.second_value.get_value(
+            intcode
+        ):
+            intcode[self.target_adress] = str(1)
+        else:
+            intcode[self.target_adress] = str(0)
+        return self._OPERATION_STEP + self.instruction_pointer
+
+    def _equals(self, intcode: Intcode) -> int:
+        if self.first_value.get_value(intcode) == self.second_value.get_value(
+            intcode
+        ):
+            intcode[self.target_adress] = str(1)
+        else:
+            intcode[self.target_adress] = str(0)
+        return self._OPERATION_STEP + self.instruction_pointer
 
 
 if __name__ == "__main__":
@@ -180,18 +233,16 @@ if __name__ == "__main__":
         for line in f.readlines():
             intcode += line.strip("\n").split(",")
 
-    # init_intcode(intcode)
-
     step: int = 0
-    position: int = 0
+    global_instruction_pointer: int = 0
     code: SingleCode = SingleCode.from_intcode(
-        intcode[position:position + 4]
+        intcode[global_instruction_pointer:global_instruction_pointer + 4]
     )
+    code.instruction_pointer = global_instruction_pointer
 
     while code.operation != Operation.Halt:
-        step = code.execute(intcode)
-        position += step
-        try:
-            code = SingleCode.from_intcode(intcode[position:position + 4])
-        except IndexError:
-            code = SingleCode.from_intcode(intcode[position])
+        global_instruction_pointer = code.execute(intcode)
+        code = SingleCode.from_intcode(
+            intcode[global_instruction_pointer:global_instruction_pointer + 4]
+        )
+        code.instruction_pointer = global_instruction_pointer
