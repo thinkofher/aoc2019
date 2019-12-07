@@ -35,6 +35,34 @@ class IOWrapper(IOHandler):
         return self._all_values()[index]
 
 
+class IOLoopWrapper(IOHandler):
+
+    setting_sequence: List[int]
+    _out_val_pos: int
+    _sequence_turn: bool
+
+    def __init__(self, setting_sequence: Tuple[int]) -> None:
+        self.setting_sequence = list(setting_sequence)
+        # Add zero as the first input value for the computer
+        self.output_values = [0]
+        self._sequence_turn = True
+        self._out_val_pos = 0
+
+    def _switch_turn(self) -> None:
+        self._sequence_turn = not self._sequence_turn
+
+    def get_input(self) -> int:
+        try:
+            if self._sequence_turn:
+                self._switch_turn()
+                return self.setting_sequence.pop(0)
+            else:
+                self._switch_turn()
+                return self.output_values[-1]
+        except IndexError:
+            return self.output_values[-1]
+
+
 class StdIOWrapper(IOHandler):
     def get_input(self) -> int:
         input_value = input("Enter input: ")
