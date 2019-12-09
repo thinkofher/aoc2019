@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 class IOHandler(ABC):
 
     output_values: List[int] = []
+    relative_base_adjust_value: int = 0
 
     @abstractmethod
     def get_input(self) -> int:
@@ -24,6 +25,7 @@ class IOWrapper(IOHandler):
         self.setting_sequence = setting_sequence
         # Add zero as the first input value for the computer
         self.output_values = [0]
+        self.relative_base_adjust_value = 0
 
     def _all_values(self) -> Tuple[int, ...]:
         return tuple(

@@ -1,4 +1,5 @@
 import enum
+from typing import Tuple
 
 
 @enum.unique
@@ -11,7 +12,31 @@ class Operation(enum.Enum):
     JumpIfFalse = 6
     LessThan = 7
     Equals = 8
+    AdjustBase = 9
     Halt = 99
+
+
+ThreeParametrs: Tuple[Operation, ...] = (
+    Operation.Add,
+    Operation.Multiply,
+    Operation.LessThan,
+    Operation.Equals,
+)
+TwoParameters: Tuple[Operation, ...] = (
+    Operation.JumpIfTrue,
+    Operation.JumpIfFalse,
+)
+SingleParameter: Tuple[Operation, ...] = (
+    Operation.Input,
+    Operation.Output,
+    Operation.AdjustBase,
+)
+
+
+@enum.unique
+class OperationType(enum.Enum):
+    Read = 0
+    Write = 1
 
 
 @enum.unique
