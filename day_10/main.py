@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Beniamin Dudek <beniamin.dudek@yahoo.com, github.com/thinkofher>
 import argparse
+from itertools import cycle
 from typing import List, NamedTuple, Set, Dict, Tuple
 from math import acos, pi
 
@@ -12,6 +13,10 @@ PRECISION = 3
 class Point(NamedTuple):
     x: int
     y: int
+
+    def distance(self, other: 'Point') -> float:
+        return round((
+            (other.x - self.x)**2 + (other.y - self.y)**2)**0.5, PRECISION)
 
 
 class Vector(NamedTuple):
@@ -28,12 +33,17 @@ class Vector(NamedTuple):
 
     @property
     def angle_from_origin(self) -> float:
-        origin_x = -1
-        origin_y = 0
+        origin_x = 0
+        origin_y = -1
 
-        return round(
-            acos((origin_x * self.x + origin_y * self.y)/(self.length()))
-            * (180/pi), PRECISION)
+        angle = round(
+            acos((origin_x * self.x + origin_y * self.y) /
+                 (self.length()))*(180/pi),
+            PRECISION)
+        if self.x >= 0:
+            return angle
+        else:
+            return 360 - angle
 
     @classmethod
     def from_two_points(cls, p1: Point, p2: Point) -> 'Vector':
@@ -50,7 +60,7 @@ def parse_asteroids(asteroid_map: List[List[str]]) -> Set[Point]:
 
 
 def calculate_vectors(asteroids: Set[Point]) -> Dict[Point, Set[Vector]]:
-    vectors = {}
+    vectors: Dict[Point, Set[Vector]] = {}
     for base in asteroids:
         for asteroid in (asteroids - set([base])):
             try:
@@ -74,6 +84,43 @@ def find_best_base(vectors_map: Dict[Point, Set[Vector]]) -> Tuple[Point, int]:
     return points_by_detected_asteroids[best_result], best_result
 
 
+def seek_for_targets_around_baes(
+    base: Point, asteroids: Set[Point]
+) -> Dict[Vector, List[Point]]:
+
+    points_by_vector: Dict[Vector, List[Point]] = {}
+
+    for asteroid in (asteroids - set([base])):
+        vec = Vector.from_two_points(base, asteroid).to_unit()
+        try:
+            points_by_vector[vec].append(asteroid)
+            points_by_vector[vec].sort(key=lambda point: base.distance(point))
+        except KeyError:
+            points_by_vector[vec] = [asteroid]
+
+    sorted_vectors = sorted(points_by_vector.keys(),
+                            key=lambda vec: vec.angle_from_origin)
+    points_by_vector = {vec: points_by_vector[vec] for vec in sorted_vectors}
+
+    return points_by_vector
+
+
+def vaporize_sorted_asteroids(
+    points_by_vector: Dict[Vector, List[Point]]
+) -> Tuple[Point, ...]:
+
+    result = []
+    for vec in cycle(points_by_vector.keys()):
+        # if every list in dict is empty
+        if not sum(map(len, points_by_vector.values())):
+            break
+        try:
+            result.append(points_by_vector[vec].pop(0))
+        except IndexError:
+            continue
+    return tuple(result)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Solution for the 9th day of Advent of Code.",
@@ -92,4 +139,17 @@ if __name__ == "__main__":
     vectors = calculate_vectors(asteroids)
 
     base, best_result = find_best_base(vectors)
-    print(best_result)
+    print(
+        f'The best location for a new monitoring \
+base is at {base.x},{base.y}.', end=' ')
+    print(f'{best_result} asteroids detected.')
+
+    targets = seek_for_targets_around_baes(base, asteroids)
+    ready_to_destroy = vaporize_sorted_asteroids(targets)
+    n = 200
+    n_asteroid = ready_to_destroy[n-1]
+    answer = 100*n_asteroid.x + n_asteroid.y
+    print(
+        f"The {n}th asteroid to be vaporized is \
+at {n_asteroid.x},{n_asteroid.y}.", end=' ')
+    print(f"Puzzle answer is {answer}.")
