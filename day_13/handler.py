@@ -16,16 +16,6 @@ class IOHandler(ABC):
         self.output_values.append(value)
 
 
-class IOGame(IOHandler):
-
-    output_values: List[int] = []
-    relative_base_adjust_value: int = 0
-
-    def get_input(self) -> int:
-        move = input("What's your move (-1, 0, 1): ")
-        return int(move)
-
-
 class IOWrapper(IOHandler):
 
     setting_sequence: Tuple[int]
