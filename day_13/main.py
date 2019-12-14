@@ -62,15 +62,18 @@ if __name__ == "__main__":
         )
         sys.exit(0)
 
-    intcode[0] = "2"  # game mode
-    if args.game == BOT:
-        computer.io_wrapper = IOGameBot(1/(SPEED_MULTIPLIER*args.speed))
-        computer.compute_all()
-        print(f"Final score: {computer.io_wrapper.score}")
-        sys.exit(0)
+    try:
+        intcode[0] = "2"  # game mode
+        if args.game == BOT:
+            computer.io_wrapper = IOGameBot(1/(SPEED_MULTIPLIER*args.speed))
+            computer.compute_all()
+            print(f"Final score: {computer.io_wrapper.score}")
+            sys.exit(0)
 
-    if args.game == PLAYER:
-        computer.io_wrapper = IOGame()
-        computer.compute_all()
-        print(f"Final score: {computer.io_wrapper.score}")
+        if args.game == PLAYER:
+            computer.io_wrapper = IOGame()
+            computer.compute_all()
+            print(f"Final score: {computer.io_wrapper.score}")
+            sys.exit(0)
+    except KeyboardInterrupt:
         sys.exit(0)
