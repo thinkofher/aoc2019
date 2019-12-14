@@ -13,9 +13,6 @@ MinimumValues = Dict[str, int]
 FUEL = "FUEL"
 ORE = "ORE"
 
-PTR = 0
-DEBUG = {}
-
 
 def parse_equation(
     single_line: str, equations: Equations, mins: MinimumValues
@@ -47,7 +44,6 @@ def is_elemental(equation: Equation, equations: Equations) -> bool:
 
 
 def needed_multiplier(needed: int, min_value: int) -> int:
-    # return needed // min_value + bool(needed % min_value)
     return int(ceil(needed/min_value))
 
 
@@ -65,30 +61,10 @@ def multiply_equation(multiplier: int, equation: Equation) -> Equation:
     return {key: value * multiplier for key, value in equation.items()}
 
 
-def execute_reactions(
-    eq: Equation, eqs: Equations, mins: MinimumValues
-) -> Equation:
-
-    ans = {}
-    for subtag, value in eq.items():
-        if contains_only_ore(eqs[subtag]):
-            ans = add_equations(ans, {subtag: value})
-        else:
-            ans = add_equations(
-                ans,
-                multiply_equation(
-                    needed_multiplier(value, mins[subtag]),
-                    eqs[subtag],
-                )
-            )
-        print(ans)
-    return ans
-
-
 def execute_with_depth(
     eq: Equation, eqs: Equations, mins: MinimumValues, depth: int
 ) -> Equation:
-    ans = {}
+    ans: Equation = {}
     for subtag, value in eq.items():
         if check_depth(eqs, subtag) == depth:
             ans = add_equations(
@@ -117,17 +93,6 @@ def execute_deeply(eqs: Equations, mins: MinimumValues, tag: str) -> Equation:
     return ans
 
 
-def execute_all_reactions(
-    eqs: Equations, mins: MinimumValues, tag: str
-) -> Equation:
-
-    ans = deepcopy(eqs[tag])
-    while not is_elemental(ans, eqs):
-        ans = execute_reactions(ans, eqs, mins)
-        print(ans)
-    return ans
-
-
 def check_depth(eqs: Equations, tag: str) -> int:
     if contains_only_ore(eqs[tag]):
         return 1
@@ -138,23 +103,6 @@ def check_depth(eqs: Equations, tag: str) -> int:
         return max(ans) + 1
 
 
-# def solve_basic_equation(
-#     basic_equation: Equation, mins: MinimumValues
-# ) -> Equation:
-#     return {
-#         key: mins[key]*needed_multiplier(value, mins[key])
-#         for key, value in basic_equation.items()
-#     }
-
-
-# def calc_ore(
-#     solved_equation: Equation, equations: Equations, mins: MinimumValues
-# ) -> int:
-#     ore = 0
-#     for key, value in solved_equation.items():
-#         ore += equations[key][ORE] * (solved_equation[key] / mins[key])
-#     return ore
-
 def solve_basic_equation(
     basic_equation: Equation, equations: Equations, mins: MinimumValues
 ) -> int:
@@ -164,7 +112,6 @@ def solve_basic_equation(
     return ans
 
 
-# TODO: Search max fuel with binary search
 def calc_fuel(
     multiplier: int, equations: Equations, mins: MinimumValues
 ) -> int:
@@ -174,6 +121,23 @@ def calc_fuel(
     return fuel
 
 
+def binary_search_fuel(eqs: Equations, mins: MinimumValues):
+    target = 1000000000000
+    lo = 1
+    hi = 1000000000
+    while lo <= hi:
+        m = (lo + hi) // 2
+        eqs_copy = deepcopy(eqs)
+        val = calc_fuel(m, eqs_copy, mins)
+        if val > target:
+            hi = m - 1
+        elif val < target:
+            lo = m + 1
+        else:
+            return m
+    return hi
+
+
 def _main(args):
     equations: Equations = {}
     mins: MinimumValues = {}
@@ -181,6 +145,7 @@ def _main(args):
         for line in map(lambda line: line.strip("\n"), f.readlines()):
             parse_equation(line, equations, mins)
     print(calc_fuel(1, equations, mins))
+    print(binary_search_fuel(equations, mins))
 
 
 if __name__ == "__main__":
